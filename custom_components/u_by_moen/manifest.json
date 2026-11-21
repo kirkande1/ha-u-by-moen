@@ -1,11 +1,13 @@
 {
   "domain": "u_by_moen",
   "name": "U by Moen",
-  "codeowners": ["@WeaveHubHQ"],
+  "codeowners": [
+    "@WeaveHubHQ"
+  ],
   "config_flow": true,
-  "documentation": "https://github.com/WeaveHubHQ/ha-u-by-moen",
+  "documentation": "https://github.com/kirkande1/ha-u-by-moen",
   "iot_class": "cloud_push",
-  "issue_tracker": "https://github.com/WeaveHubHQ/ha-u-by-moen/issues",
+  "issue_tracker": "https://github.com/kirkande1/ha-u-by-moen/issues",
   "requirements": [],
-  "version": "1.0.3"
+  "version": "1.0.4"
 }

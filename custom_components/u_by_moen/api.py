@@ -83,9 +83,20 @@ class MoenApi:
         url = f"{API_BASE_URL}{API_AUTHENTICATE}"
         params = {"email": self._email, "password": self._password}
 
+        # The Moen API takes the credentials as query parameters. aiohttp
+        # includes the full request URL (password included) in the text of
+        # its exceptions, so never let one of those reach a log message:
+        # report only the status code, and drop the exception chain.
         try:
             async with self._session.get(url, params=params) as response:
-                response.raise_for_status()
+                if response.status in (400, 401, 403):
+                    raise MoenAuthError(
+                        f"Authentication rejected (HTTP {response.status})"
+                    )
+                if response.status >= 400:
+                    raise MoenApiError(
+                        f"Authentication request failed (HTTP {response.status})"
+                    )
                 data = await response.json()
                 self._token = data.get("token")
 
@@ -96,7 +107,9 @@ class MoenApi:
                 return self._token
 
         except aiohttp.ClientError as err:
-            raise MoenAuthError(f"Authentication failed: {err}") from err
+            raise MoenApiError(
+                f"Authentication request failed: {type(err).__name__}"
+            ) from None
 
     async def get_pusher_credentials(self) -> Dict[str, str]:
         """Get Pusher credentials for WebSocket connection."""
@@ -151,7 +164,9 @@ class MoenApi:
         except aiohttp.ClientError as err:
             raise MoenApiError(f"Failed to get devices: {err}") from err
 
-    async def get_device_details(self, serial_number: str) -> Dict[str, Any]:
+    async def get_device_details(
+        self, serial_number: str, _retry: bool = True
+    ) -> Dict[str, Any]:
         """Get detailed information for a specific device."""
         if not self._token:
             await self.authenticate()
@@ -166,6 +181,18 @@ class MoenApi:
                 _LOGGER.debug("Got device details for %s", serial_number)
                 return device_data
 
+        except aiohttp.ClientResponseError as err:
+            # Same one-shot re-auth as get_devices: control commands call this
+            # directly, so an expired token must not fail them until the next
+            # poll happens to refresh it.
+            if err.status == 401 and _retry:
+                _LOGGER.warning(
+                    "Token rejected during get_device_details, re-authenticating"
+                )
+                self._token = None
+                await self.authenticate()
+                return await self.get_device_details(serial_number, _retry=False)
+            raise MoenApiError(f"Failed to get device details: {err}") from err
         except aiohttp.ClientError as err:
             raise MoenApiError(f"Failed to get device details: {err}") from err
 
@@ -199,7 +226,13 @@ class MoenApi:
         """Connect to Pusher WebSocket and keep the connection alive."""
         self._should_run = True
         self._fatal_error = False
-        return await self._ensure_connected()
+        if await self._ensure_connected():
+            return True
+        # Pusher (or the Moen credentials endpoint) was unreachable at setup.
+        # Keep trying in the background instead of waiting for a control
+        # command to notice.
+        self._schedule_reconnect()
+        return False
 
     @property
     def connected(self) -> bool:

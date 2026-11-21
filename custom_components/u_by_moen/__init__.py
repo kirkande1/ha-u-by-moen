@@ -4,9 +4,10 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import MoenApi
+from .api import MoenApi, MoenApiError, MoenAuthError
 from .const import DOMAIN
 from .coordinator import MoenDataUpdateCoordinator
 
@@ -31,9 +32,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         await api.authenticate()
         await api.get_pusher_credentials()
-    except Exception as err:
-        _LOGGER.error("Failed to authenticate with Moen API: %s", err)
-        return False
+    except MoenAuthError as err:
+        # Wrong email/password: retrying will not help, so stop and say so.
+        raise ConfigEntryError(f"Moen rejected the login: {err}") from None
+    except MoenApiError as err:
+        # Moen cloud down or unreachable: let Home Assistant retry setup
+        # with backoff instead of leaving the entry failed until a reload.
+        raise ConfigEntryNotReady(f"Cannot reach the Moen API: {err}") from err
 
     # Create coordinator
     coordinator = MoenDataUpdateCoordinator(hass, api)
@@ -91,7 +96,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     if "timer_enabled" in event_data:
                         update_data["timer_enabled"] = event_data["timer_enabled"]
                     if "time_remaining" in event_data:
-                        update_data["timer_remaining"] = event_data["time_remaining"]
+                        update_data["time_remaining"] = event_data["time_remaining"]
                     if "presets" in event_data:
                         update_data["presets"] = event_data["presets"]
 
