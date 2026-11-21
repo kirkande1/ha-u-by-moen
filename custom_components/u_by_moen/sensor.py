@@ -184,13 +184,15 @@ class MoenActivePresetSensor(MoenSensorBase):
         device_data = self.coordinator.data[self._serial_number]
         preset_position = device_data.get(ATTR_ACTIVE_PRESET, 0)
 
-        if preset_position == 0:
+        # Pusher reports active_preset as a string ("4") while REST and the
+        # presets list use ints, so compare as strings.
+        if preset_position in (0, "0", None, ""):
             return "None"
 
         # Find the preset title
         presets = device_data.get("presets", [])
         for preset in presets:
-            if preset.get("position") == preset_position:
+            if str(preset.get("position")) == str(preset_position):
                 return preset.get("title", f"Preset {preset_position}")
 
         return f"Preset {preset_position}"

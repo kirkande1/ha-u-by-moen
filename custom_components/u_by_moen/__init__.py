@@ -92,7 +92,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     if "outlets" in event_data:
                         update_data["outlets"] = event_data["outlets"]
                     if "active_preset" in event_data:
-                        update_data["active_preset"] = event_data["active_preset"]
+                        # Pusher sends this as a string; REST uses an int.
+                        preset = event_data["active_preset"]
+                        if isinstance(preset, str) and preset.strip().isdigit():
+                            preset = int(preset)
+                        update_data["active_preset"] = preset
                     if "timer_enabled" in event_data:
                         update_data["timer_enabled"] = event_data["timer_enabled"]
                     if "time_remaining" in event_data:

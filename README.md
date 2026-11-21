@@ -1,6 +1,6 @@
 # U by Moen Home Assistant Integration
 
-> **Fork note (kirkande1/ha-u-by-moen, v1.0.5):** based on WeaveHubHQ/ha-u-by-moen v1.0.3, with these fixes:
+> **Fork note (kirkande1/ha-u-by-moen, v1.0.6):** based on WeaveHubHQ/ha-u-by-moen v1.0.3, with these fixes:
 > - Pusher reconnects automatically with backoff, keepalive and re-subscribe (upstream PR #9, by SoccerCore11; fixes issue #5).
 > - Outlet switches wait for the shower to report running before selecting outlets (upstream PR #10, by Jim Moore).
 > - Login errors never include the request URL, so the password can't land in the HA log.
@@ -9,6 +9,7 @@
 > - Setup retries (ConfigEntryNotReady) when the Moen cloud is down, and stops with a clear error on a rejected login.
 > - Live timer updates now reach the Time Remaining sensor (the `time_remaining` key was misnamed).
 > - Climate entity uses the native_* temperature properties (HA deprecates the old ones in 2027.11).
+> - Active Preset shows the preset name during live updates (Pusher sends the position as a string).
 
 
 A custom Home Assistant integration for U by Moen smart shower systems (Alexa/Android version, not HomeKit).
