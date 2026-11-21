@@ -50,7 +50,7 @@ async def async_setup_entry(
 class MoenClimate(CoordinatorEntity, ClimateEntity):
     """Representation of a Moen shower as a climate entity."""
 
-    _attr_temperature_unit = UnitOfTemperature.FAHRENHEIT
+    _attr_native_temperature_unit = UnitOfTemperature.FAHRENHEIT
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
     )
@@ -105,13 +105,13 @@ class MoenClimate(CoordinatorEntity, ClimateEntity):
         return HVACMode.HEAT if mode != MODE_OFF else HVACMode.OFF
 
     @property
-    def current_temperature(self) -> Optional[float]:
+    def native_current_temperature(self) -> Optional[float]:
         """Return the current temperature."""
         device_data = self.coordinator.data[self._serial_number]
         return device_data.get(ATTR_CURRENT_TEMP)
 
     @property
-    def target_temperature(self) -> Optional[float]:
+    def native_target_temperature(self) -> Optional[float]:
         """Return the target temperature."""
         # If we have an optimistic target temp (command just sent), use that
         if self._optimistic_target_temp is not None:
